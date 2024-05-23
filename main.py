@@ -1,18 +1,18 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
-
+import matplotlib.animation as animation
 
 # Equation implemented from Chaigne and Askenfeld 1993 
 # Define constants 
 
-N = 100 # no. of string segments 
+N = 50 # no. of string segments 
 dx = 0.01 
-dt = 0.01
-max_t = 4.0
+dt = 0.0001
+max_t = 1.0
 
 # Values follow for C4 as listed in Chainge and Askenfelt 1993 
 fund_freq = 262 # Hz, assume standard tuning frequency A4 
-L = 0.62
+L = 0.62 # m
 M_s = 3.93 * 3 #string mass 
 T = 670 # string tension 
 E = 2.0e11 # Youngs modulus 
@@ -20,14 +20,16 @@ eps = 3.82e-5 # string stiffness parameter
 b_1 = 0.5 # damping coefficient 
 b_3 = 6.25e-9 # damping coefficient 
 
-mu = 10e4 # Transversal string desntiy, Placeholder value 
+M_h = 2.97 * 3 #hammer mass 
+mu = M_h/L # Transversal string desntiy, Placeholder value 
+#mu = 10e6
 c = np.sqrt(T/mu)
 v_h0 = 0.5 # m / s**2; note 4.0 1.5 0.5 for resp. forte mezzo forte piano 
 p = 2.5 # ideally between 2 and 3 
 K_h = 4.5e9 #generalised hammer stiffness 
 k_0 = int(0.12*N) #Hammer location index 
 
-M_h = 2.97 * 3 #hammer mass 
+
 
 
 samp_freq = 32000 # Hz
@@ -40,6 +42,7 @@ a_2 = (-1 + b_1 * dt + 2*b_3/dt)/D
 a_3 = (r**2 * (1 + 4 * eps * N**2))/D
 a_4 = (b_3/dt - eps * N**2 * r**2)/D
 a_5 = (-b_3 / dt) / D
+print(a_4)
 
 def sum_both_neighbours(A):
     """In 1D array, returns sum of both left and right neighbour."""
@@ -73,7 +76,7 @@ def construct_solution_matrix(N, max_t):
     F_h[2] = K_h * np.abs(eta[2] - A[k_0, 2])**p # eq (41)
     for n in range(end_begin_conditions, int(max_t/dt)-1): # time index
         for i in range(1, N-2): # place index 
-            if k_0 - 2 < i < k_0 + 2:
+            if k_0 - 3 < i < k_0 + 3:
                 hammer_window = 1
             else:
                 hammer_window = 0
@@ -90,9 +93,9 @@ def construct_solution_matrix(N, max_t):
         if eta[n+1] < A[k_0, n+1]:
             F_h[n+1] = 0 
             hammer_force_not_needed = True
-        print(n)
-        print(eta[n+1])
-        print(A[:, n+1])
+        #print(n)
+        #print(eta[n+1])
+        #print(A[:, n+1])
 
 
 
@@ -101,11 +104,30 @@ def construct_solution_matrix(N, max_t):
 A = construct_solution_matrix(N, max_t)
 
 
-plt.plot(A[:, -1])
+#plt.scatter(np.arange(N), A[:, -1])
+#plt.plot(A[:, -1])
+#plt.show()
+print(A)
+
+
+# Plot wave 
+
+# Create the figure and axis
+
+fig= plt.figure()
+ax = plt.axes(xlim=(0, N), ylim = (-10e12, 10e12))
+line, = ax.plot([], [], lw=3)
+x = np.arange(0, N)
+
+def plot_A(frame):
+    print(frame)
+    frame = frame * 50 
+    line.set_data(x, A[:, int(frame)])
+    return A[:, int(frame)]
+
+ani = animation.FuncAnimation(fig, plot_A, frames = 100)
 plt.show()
-#print(A)
-
-
+ani.save("myvideo.mp4")
 
 
 
