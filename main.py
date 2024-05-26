@@ -1,36 +1,39 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import scipy as sp 
 
 # Equation implemented from Chaigne and Askenfeld 1993
 # Define constants
 
-N = 50  # no. of string segments
-dx = 0.01
+N = 50 # no. of string segments 
+
+
+# Values follow for C4 as listed in Chainge and Askenfelt 1993 
+fund_freq = 262 # Hz, assume standard tuning frequency A4 
+L = 0.62 # m
+M_s = 3.93 * 3 #string mass 
+T = 670 # string tension 
+E = 2.0e11 # Youngs modulus 
+eps = 3.82e-5 # string stiffness parameter
+b_1 = 0.5 # damping coefficient 
+b_3 = 6.25e-9 # damping coefficient 
+
+M_h = 2.97 * 3 #hammer mass 
+mu = M_h/L # Transversal string desntiy, Placeholder value 
+#mu = 10e6
+c = np.sqrt(T/mu)
+v_h0 = 0.5 # m / s**2; note 4.0 1.5 0.5 for resp. forte mezzo forte piano 
+p = 2.5 # ideally between 2 and 3 
+K_h = 4.5e9 #generalised hammer stiffness 
+k_0 = int(0.12*N) #Hammer location index 
+
+dx = L/N
 dt = 0.0001
-max_t = 10.0
-
-# Values follow for C4 as listed in Chainge and Askenfelt 1993
-fund_freq = 262  # Hz, assume standard tuning frequency A4
-L = 0.62  # m
-M_s = 3.93 * 3  # string mass
-T = 670  # string tension
-E = 2.0e11  # Youngs modulus
-eps = 3.82e-5  # string stiffness parameter
-b_1 = 0.5  # damping coefficient
-b_3 = 6.25e-9  # damping coefficient
-
-M_h = 2.97 * 3  # hammer mass
-mu = M_h / L  # Transversal string desntiy, Placeholder value
-# mu = 10e6
-c = np.sqrt(T / mu)
-v_h0 = 0.5  # m / s**2; note 4.0 1.5 0.5 for resp. forte mezzo forte piano
-p = 2.5  # hammer force exponent; ideally between 2 and 3
-K_h = 4.5e9  # generalised hammer stiffness
-k_0 = int(0.12 * N)  # Hammer location index
+max_t = 1.0
 
 
-samp_freq = 32000  # Hz
+samp_freq = 32000 # Hz
 
 D = 1 + b_1 * dt + 2 * b_3 / dt
 r = c * dt / dx
