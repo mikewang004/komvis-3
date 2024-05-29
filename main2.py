@@ -30,10 +30,11 @@ hammer_striking_position = 0.12
 hammer_location_index = int(
     hammer_striking_position * n_physical_segments + 1
 )  # add one due to the leftmost virtual point
-eta_zeroth_step = 10.5  # position of the hammer at t=0 random value??????????
+index_to_phyiscal_position_factor = L / (n_physical_segments + 1) 
+eta_zeroth_step = 0  # position of the hammer at t=0 random value?????????? 
 
 dx = L / n_physical_segments
-dt = 0.0001
+dt = 0.001
 max_t = 1.0
 
 
@@ -66,78 +67,80 @@ def update_virtual_points(array):
     array[0] = -1 * array[2]
     array[-1] = -1 * array[-3]
 
+def simulate_string():
 
-# we will need two virtual points to be able to perform the recursion
-n_virtual_points = 2
-n_steps = int(max_t / dt)
-n_total_segments = n_physical_segments + n_virtual_points
+    # we will need two virtual points to be able to perform the recursion
+    n_virtual_points = 2
+    n_steps = int(max_t / dt)
+    n_total_segments = n_physical_segments + n_virtual_points
 
-string_position_arr = np.zeros([n_steps, n_total_segments])
-eta = np.zeros(n_steps)
-F_h = np.zeros(n_steps)
-
-
-# make a window function around the hammer location
-window_function = np.zeros(n_total_segments)
-window_function[hammer_location_index - 2 : hammer_location_index + 1] = [1.5, 0, 1.5]
+    string_position_arr = np.zeros([n_steps, n_total_segments])
+    eta = np.zeros(n_steps)
+    F_h = np.zeros(n_steps)
 
 
-# initialize by doing 3 steps
-# first, make an estimate for the first step
-zeroth_step = np.zeros(n_total_segments)
-first_step = 0.5 * (np.roll(zeroth_step, 1) + np.roll(zeroth_step, -1))
-eta_first_step = v_h0 * dt
-force_magnitude_first_step = hammer_force(
-    eta_first_step, first_step[hammer_location_index]
-)
-# calculate second step ignoring stiffness
-second_step = (
-    np.roll(first_step, -1)
-    + np.roll(first_step, 1)
-    - zeroth_step
-    + (dt * n_physical_segments * force_magnitude_first_step * window_function) / M_s
-)
-update_virtual_points(second_step)
+    # make a window function around the hammer location
+    window_function = np.zeros(n_total_segments)
+    window_function[hammer_location_index - 2 : hammer_location_index + 1] = [1.5, 0, 1.5]
 
 
-eta_second_step = (
-    2 * eta_first_step - eta_zeroth_step - (dt**2 * force_magnitude_first_step)
-)
-force_magnitude_second_step = hammer_force(
-    eta_second_step, second_step[hammer_location_index]
-)
+    # initialize by doing 3 steps
+    # first, make an estimate for the first step
+    zeroth_step = np.zeros(n_total_segments)
+    first_step = 0.5 * (np.roll(zeroth_step, 1) + np.roll(zeroth_step, -1))
+    eta_first_step = v_h0 * dt
+    force_magnitude_first_step = hammer_force(
+        eta_first_step, first_step[hammer_location_index]
+    )
+    # calculate second step ignoring stiffness
+    second_step = (
+        np.roll(first_step, -1)
+        + np.roll(first_step, 1)
+        - zeroth_step
+        + (dt * n_physical_segments * force_magnitude_first_step * window_function) / M_s
+    )
+    update_virtual_points(second_step)
 
-string_position_arr[0, :] = zeroth_step
-string_position_arr[1, :] = first_step
-string_position_arr[2, :] = second_step
 
-############
-
-start_index = 3  # start after the initialization
-for i in range(start_index, n_steps - 1):
-    two_steps_earlier = string_position_arr[i - 2, :]
-    one_step_earlier = string_position_arr[i - 1, :]
-    current = string_position_arr[i, :]
-
-    next_step = (
-        a_1 * current
-        + a_2 * one_step_earlier
-        + a_3 * (np.roll(current, 1) + np.roll(current, -1))
-        + a_4 * (np.roll(current, 2) + np.roll(current, -2))
-        + a_5
-        * (
-            np.roll(one_step_earlier, 1)
-            + np.roll(one_step_earlier, -1)
-            + two_steps_earlier
-        )
-        + 0  # force term
+    eta_second_step = (
+        2 * eta_first_step - eta_zeroth_step - (dt**2 * force_magnitude_first_step)
+    )
+    force_magnitude_second_step = hammer_force(
+        eta_second_step, second_step[hammer_location_index]
     )
 
-    # the duplicate points mirror the points right before the boundry
-    update_virtual_points(next_step)
+    string_position_arr[0, :] = zeroth_step
+    string_position_arr[1, :] = first_step
+    string_position_arr[2, :] = second_step
 
-    string_position_arr[i + 1, :] = next_step
+    ############
 
+    start_index = 3  # start after the initialization
+    for i in range(start_index, n_steps - 1):
+        two_steps_earlier = string_position_arr[i - 2, :]
+        one_step_earlier = string_position_arr[i - 1, :]
+        current = string_position_arr[i, :]
+
+        next_step = (
+            a_1 * current
+            + a_2 * one_step_earlier
+            + a_3 * (np.roll(current, 1) + np.roll(current, -1))
+            + a_4 * (np.roll(current, 2) + np.roll(current, -2))
+            + a_5
+            * (
+                np.roll(one_step_earlier, 1)
+                + np.roll(one_step_earlier, -1)
+                + two_steps_earlier
+            )
+            + 0  # force term
+        )
+
+        # the duplicate points mirror the points right before the boundry
+        update_virtual_points(next_step)
+
+        string_position_arr[i + 1, :] = next_step
+
+    return string_position_arr
 
 def make_animation(A):
     n_frames = np.shape(A)[0]
@@ -146,7 +149,7 @@ def make_animation(A):
     padding = 2
     ax = plt.axes(
         xlim=(0 - padding, n_total_segments + padding),
-        # ylim=(-10e12, 10e12)
+        ylim=(-10e0, 10e0)
     )
 
     (line,) = ax.plot([], [], lw=3)
@@ -161,5 +164,35 @@ def make_animation(A):
     ani = animation.FuncAnimation(fig, plot_A, frames=n_frames, interval=1)
     plt.show()
 
+    return 0;
 
-make_animation(string_position_arr)
+def bridge_agrafe_index_loc(index_to_phyiscal_position_factor = index_to_phyiscal_position_factor, hammer_location_index = hammer_location_index, side = "bridge"):
+    """For comparison with Chaigne 1993-1 p. 6 fig. 3. Converts the location 
+    40mm from hammer either to bridge or agrafe side to an actual index on the string.
+    side accepted inputs either "bridge" or "agrafe". """
+    if side == "bridge":
+        shift = -4e-2
+    elif side == "agrafe":
+        shift = +4e-2
+    #print((hammer_location_index * index_to_phyiscal_position_factor + shift) / index_to_phyiscal_position_factor)
+    return int((hammer_location_index * index_to_phyiscal_position_factor + shift) / index_to_phyiscal_position_factor)
+
+def plot_at_string_location(A, string_position_index):
+    """Plots (x,t) diagram of a point. 
+    Noted points are at the bridge and agrafe side both 40mm from the hammer."""
+    plt.plot(A[:, string_position_index])
+    plt.title("String at fixed position, time vs amplitude")
+    plt.show()
+    return 0;
+
+def main():
+    plot_index_loc = bridge_agrafe_index_loc(side="bridge")
+    string_position_arr = simulate_string()
+
+    plot_at_string_location(string_position_arr, plot_index_loc)
+    #make_animation(string_position_arr)
+
+
+if __name__ == "__main__":
+    main()
+#Implement string results at set points 

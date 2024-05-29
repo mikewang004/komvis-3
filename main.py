@@ -12,14 +12,14 @@ N = 50 # no. of string segments
 # Values follow for C4 as listed in Chainge and Askenfelt 1993 
 fund_freq = 262 # Hz, assume standard tuning frequency A4 
 L = 0.62 # m
-M_s = 3.93 * 3 #string mass 
+M_s = 3.93 #* 3 #string mass 
 T = 670 # string tension 
 E = 2.0e11 # Youngs modulus 
 eps = 3.82e-5 # string stiffness parameter
 b_1 = 0.5 # damping coefficient 
 b_3 = 6.25e-9 # damping coefficient 
 
-M_h = 2.97 * 3 #hammer mass 
+M_h = 2.97 #* 3 #hammer mass 
 mu = M_h/L # Transversal string desntiy, Placeholder value 
 #mu = 10e6
 c = np.sqrt(T/mu)
@@ -118,6 +118,8 @@ def construct_solution_matrix(N, max_t):
             F_h[n + 1] = 0
             hammer_force_not_needed = True
 
+        print(A[:, n])
+
     return A
 
 
@@ -135,7 +137,7 @@ print(A)
 # Create the figure and axis
 
 fig = plt.figure()
-ax = plt.axes(xlim=(0, N), ylim=(-10e12, 10e12))
+ax = plt.axes(xlim=(0, N), ylim=(-10e13, 10e13))
 (line,) = ax.plot([], [], lw=3)
 x = np.arange(0, N)
 
