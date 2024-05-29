@@ -49,33 +49,10 @@ a_4 = (b_3 / dt - eps * n_physical_segments**2 * r**2) / D
 a_5 = (-b_3 / dt) / D
 
 
-def sum_both_neighbours(A):
-    """In 1D array, returns sum of both left and right neighbour."""
-    return np.roll(A, -1) + np.roll(A, +1)
-
-
 def hammer_force(eta, y_x0, K_h=K_h, p=p):
     """Note eta should be put in as a scalar"""
     # print("k_0 string extension as follows: " + str(y_x0))
     return K_h * np.abs(eta - y_x0) ** p
-
-
-def solve_eta_hammer_force(m_H, eta, A_t, n):
-    # print("hammer force as follows:" + str(hammer_force(eta[n], A_t[k_0])))
-    n_1 = 2 * eta[n] - eta[n - 1] + (dt**2 / m_H) * hammer_force(eta[n], A_t[k_0])
-    # print(n_1)
-    return n_1
-
-
-def construct_solution_matrix(N, max_t):
-    """Assuming discretisation in N string segments and max_t/dt time segments"""
-    # Implement FDM here
-    hammer_force_not_needed = False
-    end_begin_conditions = 2  # index
-
-    # initialize arrays
-
-    # + ((dt**2 * N * K_h) / (M_s)) * F_h[n] * hammer_window
 
 
 def update_virtual_points(array):
@@ -100,17 +77,14 @@ eta = np.zeros(n_steps)
 F_h = np.zeros(n_steps)
 
 
-# initialize by doing 3 steps
-# >>> do not forget to duplicate the virtual points
-
-# first, make an estimate for the first step
-zeroth_step = np.zeros(n_total_segments)
-
 # make a window function around the hammer location
 window_function = np.zeros(n_total_segments)
 window_function[hammer_location_index - 2 : hammer_location_index + 1] = [1.5, 0, 1.5]
 
 
+# initialize by doing 3 steps
+# first, make an estimate for the first step
+zeroth_step = np.zeros(n_total_segments)
 first_step = 0.5 * (np.roll(zeroth_step, 1) + np.roll(zeroth_step, -1))
 eta_first_step = v_h0 * dt
 force_magnitude_first_step = hammer_force(
@@ -139,7 +113,7 @@ string_position_arr[2, :] = second_step
 
 ############
 
-start_index = 3
+start_index = 3  # start after the initialization
 for i in range(start_index, n_steps - 1):
     two_steps_earlier = string_position_arr[i - 2, :]
     one_step_earlier = string_position_arr[i - 1, :]
@@ -163,8 +137,6 @@ for i in range(start_index, n_steps - 1):
     update_virtual_points(next_step)
 
     string_position_arr[i + 1, :] = next_step
-
-    # now copy over the new virtual points
 
 
 def make_animation(A):
