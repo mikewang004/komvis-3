@@ -175,21 +175,21 @@ def bridge_agrafe_index_loc(index_to_phyiscal_position_factor = index_to_phyisca
     elif side == "agrafe":
         shift = +4e-2
     #print((hammer_location_index * index_to_phyiscal_position_factor + shift) / index_to_phyiscal_position_factor)
-    return int((hammer_location_index * index_to_phyiscal_position_factor + shift) / index_to_phyiscal_position_factor)
+    return int((hammer_location_index * index_to_phyiscal_position_factor + shift) / index_to_phyiscal_position_factor), side
 
-def plot_at_string_location(A, string_position_index):
+def plot_at_string_location(A, string_position_index, side):
     """Plots (x,t) diagram of a point. 
     Noted points are at the bridge and agrafe side both 40mm from the hammer."""
     plt.plot(A[:, string_position_index])
-    plt.title("String at fixed position, time vs amplitude")
+    plt.title(f"String at {side} position, time vs amplitude")
     plt.show()
     return 0;
 
 def main():
-    plot_index_loc = bridge_agrafe_index_loc(side="bridge")
+    plot_index_loc, side = bridge_agrafe_index_loc(side="bridge")
     string_position_arr = simulate_string()
 
-    plot_at_string_location(string_position_arr, plot_index_loc)
+    plot_at_string_location(string_position_arr, plot_index_loc, side)
     #make_animation(string_position_arr)
 
 
