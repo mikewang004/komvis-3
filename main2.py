@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import math
 import scipy as sp
+from scipy.io.wavfile import write
 
 # Equation implemented from Chaigne and Askenfeld 1993
 # Define constants
@@ -34,8 +36,8 @@ index_to_phyiscal_position_factor = L / (n_physical_segments + 1)
 eta_zeroth_step = 0  # position of the hammer at t=0 random value?????????? 
 
 dx = L / n_physical_segments
-dt = 0.001
-max_t = 1.0
+dt = 0.0001
+max_t = 10.0
 
 
 samp_freq = 32000  # Hz
@@ -142,14 +144,81 @@ def simulate_string():
 
     return string_position_arr
 
+    
+def make_fft_arr(string_position_arr, dt, max_t, string_position_index = 50):
+    local_string_position = string_position_arr[:, string_position_index]
+    samples_per_chunk = 100
+    n_samples = len(local_string_position)
+    n_samples_rounded_up = int(math.ceil(n_samples)) # round up for ease of operation
+    splits = n_samples_rounded_up/samples_per_chunk
+
+    n_steps = int(max_t / dt)
+    freq = np.fft.fftfreq(samples_per_chunk, dt)
+    output_arr = np.zeros((len(local_string_position), len(freq)))
+
+    # split into arrays of 10 long except possibly the last split if not divisible
+    chunks = np.array_split(local_string_position, splits)
+
+    for i, chunk in enumerate(chunks):
+        chunk_length = len(chunk)
+        if chunk_length == samples_per_chunk:
+            print(f'{samples_per_chunk=}')
+            print(f'{chunk_length=}')
+            print('right length')
+            # for the regular chunks
+            abs_fft = np.abs(np.fft.fft(chunk, axis=0))
+            output_arr[i * samples_per_chunk: (i+1) * samples_per_chunk] = np.tile(abs_fft, (samples_per_chunk, 1))
+        else:
+            print(f'{samples_per_chunk=}')
+            print(f'{chunk_length=}')
+            print('wrong length')
+            # for the regular chunks
+            #for the last chunk thats possibly indivisble by samples_per_chunk
+            output_arr[i * samples_per_chunk: i * samples_per_chunk + chunk_length] = 0
+
+            
+    positive_frequency_index = int(len(freq)/2) 
+    
+    return freq[:positive_frequency_index], output_arr[:,:positive_frequency_index]
+
+
+
+    
+def make_fft_arr2(string_position_arr, dt, max_t, string_position_index = 50):
+    local_string_position = string_position_arr[:, string_position_index]
+    samples_per_chunk = 1000
+    n_samples = len(local_string_position)
+    n_samples_rounded_up = int(math.ceil(n_samples)) # round up for ease of operation
+    splits = n_samples_rounded_up/samples_per_chunk
+
+    n_steps = int(max_t / dt)
+    freq = np.fft.fftfreq(samples_per_chunk, dt)
+    output_arr = np.zeros((len(local_string_position), len(freq)))
+
+    for i, row in enumerate(local_string_position):
+        if i < n_samples - samples_per_chunk:
+            chunk = local_string_position[i:i+samples_per_chunk]
+            abs_fft = 200*np.log10(np.abs(np.fft.fft(chunk, axis=0)))
+            output_arr[i,:] = abs_fft
+        else:
+            output_arr[i,:] = 0
+
+
+            
+    positive_frequency_index = int(len(freq)/2) 
+    
+    return freq[:positive_frequency_index], output_arr[:,:positive_frequency_index]
+
 def make_animation(A):
     n_frames = np.shape(A)[0]
     n_total_segments = np.shape(A)[1]
     fig = plt.figure()
+    maximum = np.max(A)
+    minimum = np.min(A)
     padding = 2
     ax = plt.axes(
         xlim=(0 - padding, n_total_segments + padding),
-        ylim=(-10e0, 10e0)
+        ylim=(minimum, maximum)
     )
 
     (line,) = ax.plot([], [], lw=3)
@@ -159,6 +228,40 @@ def make_animation(A):
         print(frame)
         frame = frame
         line.set_data(x, A[int(frame), :])
+        return A[int(frame), :]
+
+    ani = animation.FuncAnimation(fig, plot_A, frames=n_frames, interval=1)
+    plt.show()
+
+    return 0;
+
+    
+
+def make_double_animation(A, B, x_b):
+    frame_multiplier = 10
+    n_total_segments = np.shape(A)[1]
+    x1 = np.arange(0, n_total_segments)
+    n_frames = np.shape(A)[0]
+    n_B_points = np.shape(B)[1]
+    maximum_a, minimum_a  = np.max(A), np.min(A)
+    maximum_b, minimum_b  = np.max(B), np.min(B)
+    maximum_x_b, minimum_x_b  = np.max(x_b), np.min(x_b)
+    padding = 2
+    fig, (ax1, ax2) = plt.subplots(2,1, sharex=False, sharey=False)
+    ax1.set_ylim(bottom=minimum_a, top=maximum_a)
+    ax2.set_ylim(bottom=minimum_b, top=maximum_b)
+    ax1.set_xlim(left=0, right=n_total_segments)
+    ax2.set_xlim(left=minimum_x_b, right=maximum_x_b)
+
+    (line,) = ax1.plot([], [], lw=3)
+    (line2,) = ax2.plot([], [], lw=3)
+    x_a = np.arange(0, n_total_segments)
+
+    def plot_A(frame):
+        frame = frame_multiplier*frame
+        frame = frame % n_frames
+        line.set_data(x_a, A[int(frame), :])
+        line2.set_data(x_b, B[int(frame), :])
         return A[int(frame), :]
 
     ani = animation.FuncAnimation(fig, plot_A, frames=n_frames, interval=1)
@@ -183,14 +286,26 @@ def plot_at_string_location(A, string_position_index, side):
     plt.plot(A[:, string_position_index])
     plt.title(f"String at {side} position, time vs amplitude")
     plt.show()
-    return 0;
+    return 0
 
 def main():
     plot_index_loc, side = bridge_agrafe_index_loc(side="bridge")
     string_position_arr = simulate_string()
+    freqs, fft_arr = make_fft_arr2(string_position_arr, dt, max_t)
 
     plot_at_string_location(string_position_arr, plot_index_loc, side)
-    #make_animation(string_position_arr)
+    # make_animation(string_position_arr)
+    print(f'{np.shape(string_position_arr)=}')
+    print(f'{np.shape(fft_arr)=}')
+    make_double_animation(string_position_arr, fft_arr, freqs)
+
+
+    rate = samp_freq
+    data = string_position_arr[:,plot_index_loc]
+    scaled = np.int16(data / np.max(np.abs(data)) * 32767)
+    write('test.wav', rate, scaled)
+
+
 
 
 if __name__ == "__main__":
