@@ -301,7 +301,7 @@ def plot_at_string_location(A, time_arr, string_position_index, side):
     Noted points are at the bridge and agrafe side both 40mm from the hammer."""
     plt.plot(time_arr, A[:, string_position_index]*1000)
     plt.title(f"String at {side} position, time vs amplitude")
-    #plt.xlim(0, 100)
+    plt.xlim(0, 100)
     plt.xlabel("time (ms)")
     plt.ylabel("amplitude (mm)")
     plt.show()
