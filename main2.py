@@ -121,15 +121,12 @@ def simulate_string():
     string_position_arr[2, :] = second_step
 
     ############
-
-    hammer_force_needed = True
-
     start_index = 3  # start after the initialization
     for i in range(start_index, n_steps - 1):
 
         # Update F_h and eta 
-        if hammer_force_needed == True:
-            eta[i] = 2 * eta[i-1] - eta[i - 2] + (dt**2 / M_h)
+        if eta[i] > string_position_arr[i, hammer_location_index]:
+            eta[i] = 2 * eta[i-1] - eta[i - 2] - (dt**2 * F_h[i-1]/ M_h)
             F_h[i] =  hammer_force(eta[i], string_position_arr[i, hammer_location_index])
         two_steps_earlier = string_position_arr[i - 2, :]
         one_step_earlier = string_position_arr[i - 1, :]
@@ -154,8 +151,6 @@ def simulate_string():
         string_position_arr[i + 1, -1] = string_position_arr[i+1, 0]
         string_position_arr[i + 1, :] = next_step
 
-        if eta[i] < string_position_arr[i, hammer_location_index]:
-            hammer_force_needed = False
 
 
     return string_position_arr
